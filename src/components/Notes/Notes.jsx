@@ -4,6 +4,10 @@ import Button from "../Button/Button";
 import { smoothScrollTo } from "../../utils/smoothScroll";
 import { ErrorState } from "../Feedback/AsyncStates";
 
+const BASE_URL = "https://solid-space-telegram-rv6rq4947jqfxx4g-5001.app.github.dev";
+
+const API = `${BASE_URL}/api/notes`;
+
 const REQUIRED_ENDPOINTS = [
   "POST /notes",
   "GET /notes",
@@ -165,11 +169,29 @@ const Notes = () => {
     }
     setFormValidationErrors("post", nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      setError("Fix validation errors in POST /notes.");
+      setError("Fix x notes.");
       return;
     }
 
     setCallLoading("post", true);
+
+    // try {
+      const res = await axios.post(API, postForm);
+
+      setMessage("Note created successfully");
+      setPostForm({ title: "", content: "" });
+
+      setCallResponse("post", "POST /notes", res.status, res.data);
+      addActivity("POST", "/notes", res.status);
+
+      fetchNotes();
+    // } catch (err) {
+    //   const msg = err.response?.data?.message || "Failed to create note";
+    //   setError(msg);
+    //   addActivity("POST", "/notes", err.response?.status || 500, msg);
+    // } finally {
+      setCallLoading("post", false);
+    // }
 
   };
 
@@ -250,6 +272,20 @@ const Notes = () => {
         `${formatDateTime(item.at)} | ${item.method} ${item.path} | ${item.status} | ${item.info || ""}`
     );
     const output = lines.length > 0 ? lines.join("\n") : "No activity captured yet.";
+  };
+
+  const exportLogsJson = () => {
+    const dataStr = JSON.stringify(activity, null, 2);
+
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "notes-api-activity.json";
+    link.click();
+
+    URL.revokeObjectURL(url);
   };
 
   const renderResponsePanel = (key, emptyText) => {

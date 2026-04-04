@@ -18,6 +18,8 @@ const allowedOrigins = [
   "http://127.0.0.1:3000",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+  "https://solid-space-telegram-rv6rq4947jqfxx4g-5001.app.github.dev",
+  "https://solid-space-telegram-rv6rq4947jqfxx4g-3000.app.github.dev",
 ];
 
 const corsOptions = {
