@@ -135,10 +135,24 @@ const Notes = () => {
     setLatestResponse(payload);
   };
 
-  const fetchNotes = async (silent = true) => {
-    setCallLoading("getAll", true);
-
-  };
+const fetchNotes = async (silent = true) => {
+  if (!silent) resetAlerts();
+  setCallLoading("getAll", true);
+  try {
+    const res = await axios.get(API); // GET /api/notes
+    setNotes(res.data);
+    setCallResponse("getAll", "GET /notes", res.status, res.data);
+    addActivity("GET", "/notes", res.status);
+    setNotesFetchError("");
+  } catch (err) {
+    const msg = err.response?.data?.message || err.message || "Failed to fetch notes";
+    if (!silent) setError(msg);
+    setNotesFetchError(msg);
+    addActivity("GET", "/notes", err.response?.status || 500, msg);
+  } finally {
+    setCallLoading("getAll", false);
+  }
+};
 
   useEffect(() => {
     fetchNotes(true);
@@ -157,99 +171,118 @@ const Notes = () => {
     return () => clearTimeout(timer);
   }, [message, error]);
 
-  const handlePostCreate = async (event) => {
-    event.preventDefault();
-    resetAlerts();
-    const nextErrors = {};
-    if (!postForm.title.trim()) {
-      nextErrors.title = "Title is required.";
-    }
-    if (!postForm.content.trim()) {
-      nextErrors.content = "Content is required.";
-    }
-    setFormValidationErrors("post", nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
-      setError("Fix x notes.");
-      return;
-    }
+// POST /notes
+const handlePostCreate = async (event) => {
+  event.preventDefault();
+  resetAlerts();
+  const nextErrors = {};
+  if (!postForm.title.trim()) nextErrors.title = "Title is required.";
+  if (!postForm.content.trim()) nextErrors.content = "Content is required.";
+  setFormValidationErrors("post", nextErrors);
+  if (Object.keys(nextErrors).length > 0) {
+    setError("Fix form validation errors.");
+    return;
+  }
 
-    setCallLoading("post", true);
+  setCallLoading("post", true);
+  try {
+    const res = await axios.post(API, postForm);
+    setMessage("Note created successfully");
+    setPostForm({ title: "", content: "" });
+    setCallResponse("post", "POST /notes", res.status, res.data);
+    addActivity("POST", "/notes", res.status);
+    fetchNotes(false); // refresh notes
+  } catch (err) {
+    const msg = err.response?.data?.message || err.message || "Failed to create note";
+    setError(msg);
+    addActivity("POST", "/notes", err.response?.status || 500, msg);
+  } finally {
+    setCallLoading("post", false);
+  }
+};
 
-    // try {
-      const res = await axios.post(API, postForm);
+const handleGetById = async (event) => {
+  event.preventDefault();
+  resetAlerts();
+  const nextErrors = {};
+  if (!getOneId.trim()) nextErrors.id = "Enter a note ID.";
+  setFormValidationErrors("getOne", nextErrors);
+  if (Object.keys(nextErrors).length > 0) {
+    setError("Fix validation errors in GET /notes/:id.");
+    return;
+  }
 
-      setMessage("Note created successfully");
-      setPostForm({ title: "", content: "" });
+  setCallLoading("getOne", true);
+  try {
+    const res = await axios.get(`${API}/${getOneId}`);
+    setCallResponse("getOne", `GET /notes/${getOneId}`, res.status, res.data);
+    addActivity("GET", `/notes/${getOneId}`, res.status);
+  } catch (err) {
+    const msg = err.response?.data?.message || err.message || "Failed to fetch note";
+    setError(msg);
+    addActivity("GET", `/notes/${getOneId}`, err.response?.status || 500, msg);
+  } finally {
+    setCallLoading("getOne", false);
+  }
+};
 
-      setCallResponse("post", "POST /notes", res.status, res.data);
-      addActivity("POST", "/notes", res.status);
+const handlePutUpdate = async (event) => {
+  event.preventDefault();
+  resetAlerts();
+  const nextErrors = {};
+  if (!putForm.id.trim()) nextErrors.id = "ID is required.";
+  if (!putForm.title.trim()) nextErrors.title = "Updated title is required.";
+  if (!putForm.content.trim()) nextErrors.content = "Updated content is required.";
+  setFormValidationErrors("put", nextErrors);
+  if (Object.keys(nextErrors).length > 0) {
+    setError("Fix validation errors in PUT /notes/:id.");
+    return;
+  }
 
-      fetchNotes();
-    // } catch (err) {
-    //   const msg = err.response?.data?.message || "Failed to create note";
-    //   setError(msg);
-    //   addActivity("POST", "/notes", err.response?.status || 500, msg);
-    // } finally {
-      setCallLoading("post", false);
-    // }
+  setCallLoading("put", true);
+  try {
+    const res = await axios.put(`${API}/${putForm.id}`, {
+      title: putForm.title,
+      content: putForm.content,
+    });
+    setMessage(`Note #${putForm.id} updated`);
+    setCallResponse("put", `PUT /notes/${putForm.id}`, res.status, res.data);
+    addActivity("PUT", `/notes/${putForm.id}`, res.status);
+    fetchNotes(false); // refresh notes
+  } catch (err) {
+    const msg = err.response?.data?.message || err.message || "Failed to update note";
+    setError(msg);
+    addActivity("PUT", `/notes/${putForm.id}`, err.response?.status || 500, msg);
+  } finally {
+    setCallLoading("put", false);
+  }
+};
 
-  };
+const deleteNoteById = async (id, fromCard = false) => {
+  resetAlerts();
+  const nextErrors = {};
+  if (!id.trim()) nextErrors.id = "ID is required.";
+  if (!fromCard) setFormValidationErrors("delete", nextErrors);
+  if (Object.keys(nextErrors).length > 0) {
+    setError("Fix validation errors in DELETE /notes/:id.");
+    return;
+  }
 
-  const handleGetById = async (event) => {
-    event.preventDefault();
-    resetAlerts();
-    const nextErrors = {};
-    if (!getOneId.trim()) {
-      nextErrors.id = "Enter a note ID.";
-    }
-    setFormValidationErrors("getOne", nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
-      setError("Fix validation errors in GET /notes/:id.");
-      return;
-    }
-
-    setCallLoading("getOne", true);
-
-  };
-
-  const handlePutUpdate = async (event) => {
-    event.preventDefault();
-    resetAlerts();
-    const nextErrors = {};
-    if (!putForm.id.trim()) {
-      nextErrors.id = "ID is required.";
-    }
-    if (!putForm.title.trim()) {
-      nextErrors.title = "Updated title is required.";
-    }
-    if (!putForm.content.trim()) {
-      nextErrors.content = "Updated content is required.";
-    }
-    setFormValidationErrors("put", nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
-      setError("Fix validation errors in PUT /notes/:id.");
-      return;
-    }
-
-    setCallLoading("put", true);
-  };
-
-  const deleteNoteById = async (id, fromCard = false) => {
-    resetAlerts();
-    const nextErrors = {};
-    if (!id.trim()) {
-      nextErrors.id = "ID is required.";
-    }
-    if (!fromCard) {
-      setFormValidationErrors("delete", nextErrors);
-    }
-    if (Object.keys(nextErrors).length > 0) {
-      setError("Fix validation errors in DELETE /notes/:id.");
-      return;
-    }
-
-    setCallLoading("delete", true);
-  };
+  setCallLoading("delete", true);
+  try {
+    const res = await axios.delete(`${API}/${id}`);
+    setMessage(`Note #${id} deleted`);
+    setCallResponse("delete", `DELETE /notes/${id}`, res.status, res.data);
+    addActivity("DELETE", `/notes/${id}`, res.status);
+    fetchNotes(false); // refresh notes
+  } catch (err) {
+    const msg = err.response?.data?.message || err.message || "Failed to delete note";
+    setError(msg);
+    addActivity("DELETE", `/notes/${id}`, err.response?.status || 500, msg);
+  } finally {
+    setCallLoading("delete", false);
+  }
+};
 
   const handleDeleteById = async (event) => {
     event.preventDefault();
