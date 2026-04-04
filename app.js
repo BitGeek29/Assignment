@@ -6,6 +6,7 @@ const socketIO = require("socket.io");
 const productRoutes = require("./server/routers/productRoutes");
 const authRoutes = require("./server/routers/authRoutes");
 const sellerRoutes = require("./server/routers/sellerRoutes");
+const notesRoutes = require("./server/routers/notesRoutes");
 
 require("dotenv").config();
 
@@ -45,6 +46,7 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/seller", sellerRoutes);
+app.use("/api/notes", notesRoutes);
 
 const PORT = process.env.PORT || 5001;
 const io = socketIO(server, {
