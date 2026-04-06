@@ -4,7 +4,7 @@ import Button from "../Button/Button";
 import { smoothScrollTo } from "../../utils/smoothScroll";
 import { ErrorState } from "../Feedback/AsyncStates";
 
-const BASE_URL = "https://solid-space-telegram-rv6rq4947jqfxx4g-5001.app.github.dev";
+const BASE_URL = "http://localhost:5001";
 
 const API = `${BASE_URL}/api/notes`;
 

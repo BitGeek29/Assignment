@@ -31,7 +31,7 @@ const authenticateSocket = async (socket, next) => {
       return next(new Error('Unauthorized access to inventory'));
     }
 
-    // next(new Error('Authentication failed'));
+    next(new Error('Authentication failed'));
   }
 };
 

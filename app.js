@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const socketIO = require("socket.io");
+const connectDB = require('./server/config/db');
 const productRoutes = require("./server/routers/productRoutes");
 const authRoutes = require("./server/routers/authRoutes");
 const sellerRoutes = require("./server/routers/sellerRoutes");
@@ -18,8 +19,6 @@ const allowedOrigins = [
   "http://127.0.0.1:3000",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  "https://solid-space-telegram-rv6rq4947jqfxx4g-5001.app.github.dev",
-  "https://solid-space-telegram-rv6rq4947jqfxx4g-3000.app.github.dev",
 ];
 
 const corsOptions = {
@@ -71,5 +70,7 @@ io.on("connection", (socket) => {
     console.log("Socket disconnected");
   });
 });
+
+connectDB();
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
