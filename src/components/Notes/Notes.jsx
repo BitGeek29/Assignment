@@ -4,6 +4,9 @@ import Button from "../Button/Button";
 import { smoothScrollTo } from "../../utils/smoothScroll";
 import { ErrorState } from "../Feedback/AsyncStates";
 
+const BASE_URL = "http://localhost:5001";
+const API = `${BASE_URL}/api/notes`;
+
 const REQUIRED_ENDPOINTS = [
   "POST /notes",
   "GET /notes",
@@ -132,8 +135,22 @@ const Notes = () => {
   };
 
   const fetchNotes = async (silent = true) => {
+    if (!silent) resetAlerts();
     setCallLoading("getAll", true);
-
+    try {
+      const res = await axios.get(API); // GET /api/notes
+      setNotes(res.data);
+      setCallResponse("getAll", "GET /notes", res.status, res.data);
+      addActivity("GET", "/notes", res.status);
+      setNotesFetchError("");
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to fetch notes";
+      if (!silent) setError(msg);
+      setNotesFetchError(msg);
+      addActivity("GET", "/notes", err.response?.status || 500, msg);
+    } finally {
+      setCallLoading("getAll", false);
+    }
   };
 
   useEffect(() => {
@@ -157,29 +174,36 @@ const Notes = () => {
     event.preventDefault();
     resetAlerts();
     const nextErrors = {};
-    if (!postForm.title.trim()) {
-      nextErrors.title = "Title is required.";
-    }
-    if (!postForm.content.trim()) {
-      nextErrors.content = "Content is required.";
-    }
+    if (!postForm.title.trim()) nextErrors.title = "Title is required.";
+    if (!postForm.content.trim()) nextErrors.content = "Content is required.";
     setFormValidationErrors("post", nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      setError("Fix validation errors in POST /notes.");
+      setError("Fix form validation errors.");
       return;
     }
 
     setCallLoading("post", true);
-
+    try {
+      const res = await axios.post(API, postForm);
+      setMessage("Note created successfully");
+      setPostForm({ title: "", content: "" });
+      setCallResponse("post", "POST /notes", res.status, res.data);
+      addActivity("POST", "/notes", res.status);
+      fetchNotes(false); // refresh notes
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to create note";
+      setError(msg);
+      addActivity("POST", "/notes", err.response?.status || 500, msg);
+    } finally {
+      setCallLoading("post", false);
+    }
   };
 
   const handleGetById = async (event) => {
     event.preventDefault();
     resetAlerts();
     const nextErrors = {};
-    if (!getOneId.trim()) {
-      nextErrors.id = "Enter a note ID.";
-    }
+    if (!getOneId.trim()) nextErrors.id = "Enter a note ID.";
     setFormValidationErrors("getOne", nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       setError("Fix validation errors in GET /notes/:id.");
@@ -187,22 +211,26 @@ const Notes = () => {
     }
 
     setCallLoading("getOne", true);
-
+    try {
+      const res = await axios.get(`${API}/${getOneId}`);
+      setCallResponse("getOne", `GET /notes/${getOneId}`, res.status, res.data);
+      addActivity("GET", `/notes/${getOneId}`, res.status);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to fetch note";
+      setError(msg);
+      addActivity("GET", `/notes/${getOneId}`, err.response?.status || 500, msg);
+    } finally {
+      setCallLoading("getOne", false);
+    }
   };
 
   const handlePutUpdate = async (event) => {
     event.preventDefault();
     resetAlerts();
     const nextErrors = {};
-    if (!putForm.id.trim()) {
-      nextErrors.id = "ID is required.";
-    }
-    if (!putForm.title.trim()) {
-      nextErrors.title = "Updated title is required.";
-    }
-    if (!putForm.content.trim()) {
-      nextErrors.content = "Updated content is required.";
-    }
+    if (!putForm.id.trim()) nextErrors.id = "ID is required.";
+    if (!putForm.title.trim()) nextErrors.title = "Updated title is required.";
+    if (!putForm.content.trim()) nextErrors.content = "Updated content is required.";
     setFormValidationErrors("put", nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       setError("Fix validation errors in PUT /notes/:id.");
@@ -210,23 +238,48 @@ const Notes = () => {
     }
 
     setCallLoading("put", true);
+    try {
+      const res = await axios.put(`${API}/${putForm.id}`, {
+        title: putForm.title,
+        content: putForm.content,
+      });
+      setMessage(`Note #${putForm.id} updated`);
+      setCallResponse("put", `PUT /notes/${putForm.id}`, res.status, res.data);
+      addActivity("PUT", `/notes/${putForm.id}`, res.status);
+      fetchNotes(false); // refresh notes
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to update note";
+      setError(msg);
+      addActivity("PUT", `/notes/${putForm.id}`, err.response?.status || 500, msg);
+    } finally {
+      setCallLoading("put", false);
+    }
   };
 
   const deleteNoteById = async (id, fromCard = false) => {
     resetAlerts();
     const nextErrors = {};
-    if (!id.trim()) {
-      nextErrors.id = "ID is required.";
-    }
-    if (!fromCard) {
-      setFormValidationErrors("delete", nextErrors);
-    }
+    if (!id.trim()) nextErrors.id = "ID is required.";
+    if (!fromCard) setFormValidationErrors("delete", nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       setError("Fix validation errors in DELETE /notes/:id.");
       return;
     }
 
     setCallLoading("delete", true);
+    try {
+      const res = await axios.delete(`${API}/${id}`);
+      setMessage(`Note #${id} deleted`);
+      setCallResponse("delete", `DELETE /notes/${id}`, res.status, res.data);
+      addActivity("DELETE", `/notes/${id}`, res.status);
+      fetchNotes(false); // refresh notes
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to delete note";
+      setError(msg);
+      addActivity("DELETE", `/notes/${id}`, err.response?.status || 500, msg);
+    } finally {
+      setCallLoading("delete", false);
+    }
   };
 
   const handleDeleteById = async (event) => {
@@ -250,6 +303,20 @@ const Notes = () => {
         `${formatDateTime(item.at)} | ${item.method} ${item.path} | ${item.status} | ${item.info || ""}`
     );
     const output = lines.length > 0 ? lines.join("\n") : "No activity captured yet.";
+  };
+
+  const exportLogsJson = () => {
+    const dataStr = JSON.stringify(activity, null, 2);
+
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "notes-api-activity.json";
+    link.click();
+
+    URL.revokeObjectURL(url);
   };
 
   const renderResponsePanel = (key, emptyText) => {
